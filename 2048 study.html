@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<title>HTML 5 Game</title>
+	<script src="js/jquery-1.4.2.js"></script>
+	<script>
+		$(function(){
+			var canvasElement = $("#scene");//获取画布的jquery对象
+			var canvas = canvasElement.get(0).getContext("2d");//获取画布上下文
+			var canvas_wh = canvasElement.width();//获取画布宽度（高度请保持一致）
+			var FPS = 30;//刷新率
+			var bg_radius = 6.0;//圆角度数
+			var bg_color = "#bbada0";//背景色
+			var lcbg_color = "rgba(238, 228, 218, 0.35)";//格子的背景色
+			var lc_setting =   {
+									2 : {
+										"fontsize":42,
+										"bgcolor":"#eee4da",
+										"fontupdateheight":1,
+										"color":"#776e65"
+									},
+									4 : {
+										"fontsize":42,
+										"bgcolor":"#ede0c8",
+										"fontupdateheight":1,
+										"color":"#776e65"
+									},
+									8 : {
+										"fontsize":42,
+										"bgcolor":"#f2b179",
+										"fontupdateheight":1,
+										"color":"#f9f6f2"
+									},
+									16 : {
+										"fontsize":40,
+										"bgcolor":"#f59563",
+										"fontupdateheight":1,
+										"color":"#f9f6f2"
+									},
+									32 : {
+										"fontsize":40,
+										"bgcolor":"#f67c5f",
+										"fontupdateheight":1,
+										"color":"#f9f6f2"
+									},
+									64 : {
+										"fontsize":40,
+										"bgcolor":"#f65e3b",
+										"fontupdateheight":1,
+										"color":"#f9f6f2"
+									},
+									128 : {
+										"fontsize":31,
+										"bgcolor":"#edcf72",
+										"fontupdateheight":4,
+										"color":"#f9f6f2"
+									},
+									256 : {
+										"fontsize":31,
+										"bgcolor":"#edcf72",
+										"fontupdateheight":4,
+										"color":"#f9f6f2"
+									},
+									512 : {
+										"fontsize":31,
+										"bgcolor":"#edcf72",
+										"fontupdateheight":4,
+										"color":"#f9f6f2"
+									},
+									1024 : {
+										"fontsize":28,
+										"bgcolor":"#edcf72",
+										"fontupdateheight":4,
+										"color":"#f9f6f2"
+									},
+									2048 : {
+										"fontsize":28,
+										"bgcolor":"#edcf72",
+										"fontupdateheight":4,
+										"color":"#f9f6f2"
+									}
+								};
+			var grid_data = [];//记录数据容器
+			var lineAndColumn = 4;//每行格子的数量（列一致）
+			var lc_space = 16;//边距
+			var lc_wh = (canvas_wh - lc_space * (lineAndColumn + 1)) / 4;//格式的宽（正方形，宽高一致）
+
+			setInterval(function(){
+				draw();
+			}, 1000/FPS);
+
+			function draw(){
+				canvas.clearRect( 0, 0, canvas_wh, canvas_wh);
+				background();
+				griddraw();
+			}
+			//背景和背景格子
+			function background(){
+				//绘制背景
+				canvas.fillStyle = bg_color;
+				roundRectanglePath(canvas, new Rect( 0, 0, canvas_wh, canvas_wh), bg_radius);
+				canvas.fill();
+				//绘制格子的背景
+				canvas.fillStyle = lcbg_color;
+				var larr = [];//因为格子是对称的，所以只需要计算一列的一个方向的坐标 进行复用
+				for (var i = lineAndColumn - 1; i >=0; i--) {
+					larr[i] = lc_space + i * (lc_wh + lc_space);
+				}
+				for (var i = lineAndColumn - 1; i >=0; i--) {
+					for (var j = lineAndColumn - 1; j >=0; j--) {
+						roundRectanglePath(canvas, new Rect( larr[i], larr[j], lc_wh, lc_wh), bg_radius);
+						canvas.fill();
+					}
+				}
+			}
+			//初始化格子数据
+			function gameinit(){
+				for (var i = lineAndColumn - 1; i >=0; i--) {
+					grid_data[i] = new Array();
+					for (var j = lineAndColumn - 1; j >=0; j--) {
+						grid_data[i][j] = 0;
+					};
+				};
+				grid_data[0][0] = 2;
+				grid_data[0][1] = 2;
+				grid_data[0][2] = 2;
+				grid_data[0][3] = 2;
+				//gameRandom(2);
+			}
+			//随机填充两个格子的数据
+			function gameRandom(count){
+				var x = 0;
+				var y = 0;
+				for (var i = count - 1; i >= 0; i--) {
+					x = Math.floor(Math.random() * 4);
+					y = Math.floor(Math.random() * 4);
+					if (grid_data[x][y] == 0) {
+						var num = Math.random();
+						if (num > 0.66666) {
+							num = 4;
+						}else{
+							num = 2;
+						}
+						grid_data[x][y] = num;
+						//console.log("x" + x + "y" + y);
+					}else{
+						i++;
+					}
+				}
+			}
+			//绘制格子
+			function griddraw(){
+				var lc_x;
+				var lc_y;
+				for (var i = lineAndColumn - 1; i >=0; i--) {
+					lc_y = lc_space + i * (lc_wh + lc_space);
+					for (var j = lineAndColumn - 1; j >=0; j--) {
+						var count = grid_data[i][j];
+						if (count != 0) {
+							lc_x = lc_space + j * (lc_wh + lc_space);
+
+							var rect = new Rect( lc_x, lc_y, lc_wh, lc_wh);
+							canvas.fillStyle = lc_setting[count]["bgcolor"];
+							roundRectanglePath(canvas, rect, bg_radius);
+							canvas.fill();
+
+							// console.log("x" + i + " y" + j + "count" + grid_data[i][j]);
+
+						    canvas.fillStyle = lc_setting[count]["color"];
+							canvas.font = "bold "+ lc_setting[count]["fontsize"] + "px Arial";
+							canvas.textAlign = "center";
+							canvas.fillText("" + count, lc_x + 38, lc_y + lc_wh/2.0 + 16 - lc_setting[count]["fontupdateheight"]);   
+						}
+					}
+				}
+			}
+			//矩形对象
+			function Rect( x, y, width, height)
+			{
+			    this.x = x;
+			    this.y = y;
+			    this.width = width;
+			    this.height= height;
+			}
+			//矩形对象的方法
+			Rect.prototype.getX = function()
+			{
+			    return this.x;
+			};
+			Rect.prototype.getY = function()
+			{
+			    return this.y;
+			};
+			Rect.prototype.getWidth = function()
+			{
+			    return this.width;
+			};
+			Rect.prototype.getHeight = function()
+			{
+			    return this.height;
+			};
+			Rect.prototype.getLeft = function()
+			{
+			    return this.x;
+			};
+			Rect.prototype.getTop = function()
+			{
+			    return this.y;
+			};
+			Rect.prototype.getRight = function()
+			{
+			    return (this.x + this.width);
+			};
+			Rect.prototype.getBottom = function()
+			{
+			    return (this.y + this.height);
+			};
+			//绘制矩形
+			function roundRectanglePath( context, rect, radius){
+				context.beginPath();
+				context.moveTo( rect.getX() + radius, rect.getY());
+			    context.lineTo( rect.getRight() - radius, rect.getY());
+			    context.arc(rect.getRight() - radius, rect.getY() + radius, radius, 3 * Math.PI/2, 2 * Math.PI, false);//(圆心坐标X，圆心坐标Y，半径，开始角度，结束角度，是否反向绘制)
+			    context.lineTo( rect.getRight(), rect.getBottom() - radius);
+			    context.arc( rect.getRight() - radius, rect.getBottom() - radius, radius, 0, Math.PI/2, false);
+			    context.lineTo( rect.getX() + radius, rect.getBottom() );
+			    context.arc( rect.getX() + radius, rect.getBottom() - radius, radius, Math.PI/2, Math.PI, false);
+			    context.lineTo( rect.getX(), rect.getY() + radius);
+			    context.arc( rect.getX() + radius, rect.getY() + radius, radius, Math.PI, 3 * Math.PI/2, false);
+			    context.closePath();
+			}
+			gameinit();//游戏初始化
+			//键盘绑定事件
+			$(document).keydown(function(event){
+				var result;
+				switch(event.keyCode){
+					case 37:
+						result = "左";
+						getGArray(0,0);//(横向0 纵向1, 0代表是递增遍历 1代表递减遍历)
+						console.log(result);
+						break;
+					case 38:
+						result = "上";
+						getGArray(1, 0);
+						console.log(result);
+						break;
+					case 39:
+						result = "右";
+						getGArray(0, 1);
+						console.log(result);
+						break;
+					case 40:
+						result = "下";
+						getGArray(1, 1);
+						console.log(result);
+						break;
+				}
+			});
+			//调试，打印格子的所有信息
+//			function arrayprint(array){
+//				console.log("-------------");
+//				for (var i = 0; i < array.length; i++) {
+//					for (var j = 0; j < array[i].length; j++){
+//						var count = array[i][j];
+//						console.log(" x:" + i + " y:" + j + " count:" + count);
+//					}
+//				}
+//				console.log("-------------");
+//			}
+			//得到整理的数组
+			function getGArray(start,lineOrColumn){
+				var grid_array = [];
+				var cord_index = 0;
+				var isCheckNull = false;
+				if (start == 0) {
+					//外循环纵向
+					if (lineOrColumn == 0) {
+						//从左向右获取值，键盘左
+						for (var i = 0; i < lineAndColumn; i++) {
+							cord_index = 0;
+							grid_array[i] = new Array();
+							for (var j = 0; j < lineAndColumn; j++) {
+								if (grid_data[i][j] != 0) {
+									grid_array[i][cord_index] = grid_data[i][j];
+									cord_index++;
+								}
+							};
+							if(cord_index< lineAndColumn - 1){
+								isCheckNull = true;
+							}
+						};
+					}else{
+						//从右至左获取值，键盘右
+						for (var i = 0; i < lineAndColumn; i++) {
+							cord_index = 0;
+							grid_array[i] = new Array();
+							for (var j = lineAndColumn - 1; j >= 0; j--) {
+								if (grid_data[i][j] != 0) {
+									grid_array[i][cord_index] = grid_data[i][j];
+									cord_index++;
+								}
+							};
+							if(cord_index< lineAndColumn - 1){
+								isCheckNull = true;
+							}
+						};
+					}
+				}else{
+					//外循环横向
+					if (lineOrColumn == 0) {
+						//从上到下获取值，键盘上
+						for (var j = 0; j < lineAndColumn; j++) {
+							cord_index = 0;
+							grid_array[j] = new Array();
+							for (var i = 0; i < lineAndColumn; i++) {
+								if (grid_data[i][j] != 0) {
+									grid_array[j][cord_index] = grid_data[i][j];
+									cord_index++;
+								}
+							};
+							if(cord_index< lineAndColumn - 1){
+								isCheckNull = true;
+							}
+						};
+					}else{
+						//从下到上获取值，键盘下
+						for (var j = 0; j < lineAndColumn; j++) {
+							cord_index = 0;
+							grid_array[j] = new Array();
+							for (var i = lineAndColumn - 1; i >= 0; i--) {
+								if (grid_data[i][j] != 0) {
+									grid_array[j][cord_index] = grid_data[i][j];
+									cord_index++;
+								}
+							};
+							//可以检查该行是否有空
+							if(cord_index< lineAndColumn - 1){
+								isCheckNull = true;
+							}
+						};
+					}
+				}
+				//凡是有空格子、经过移动或者合并代表下一步还能继续玩，所以不用检查直接随机生成一个格子
+				var isMoved = moveArray(grid_array, start, lineOrColumn);
+				if(isMoved){
+					setTimeout(function(){
+						gameRandom(1);
+					},100) ;
+					console.log("不用检查");
+				}else{
+					if(!isCheckNull){
+						if(checkGameIsOver()){
+							console.log("游戏尚未结束噢，随机一个呗");
+							setTimeout(function(){
+								gameRandom(1);
+							},100) ;
+						}else{
+							alert("游戏已经结束");
+						}
+					}
+				}
+			}
+			//运算，移动 （传入的数组是已被整理为同种排列格式）
+			function moveArray(array, start, lineOrColumn){
+				var isMove = false;//返回结果，代表是否进行过移动
+				var isMerge = false;//统计相同数值是否进行过合并
+				for(var i = 0;i < array.length; i++){
+					var isLineMerge = true;//该行尚未进行过合并
+					for(var j = 0; j < array[i].length; j++){
+						if(array[i][j] != 0 ){
+							if(array[i][j] == array[i][j+1] && isLineMerge){
+								array[i][j] += array[i][j];//合并同等数值
+								array[i][j+1] = 0;//后向置0
+								isMerge = true;
+								isLineMerge = false;
+							}
+							if( (j-1) >= 0 && array[i][j-1] == 0 ){
+								array[i][j-1] = array[i][j];
+								array[i][j] = 0;
+							}
+						}
+					}
+				}
+				var isUpdated = dataUpdate(array,start,lineOrColumn);
+				return (isMove || isMerge || isUpdated);
+			}
+			//数据更新修正
+			function dataUpdate(array, start, lineOrColumn){
+				var isUpdated = false;
+				if (start == 0) {
+					//外循环纵向
+					if (lineOrColumn == 0) {
+						//从左向右获取值，键盘左
+						console.log("update左");
+						for (var i = 0; i < lineAndColumn; i++) {
+							for (var j = 0; j < array[i].length; j++) {
+								if(grid_data[i][j] != array[i][j]) {
+									grid_data[i][j] = array[i][j];
+									isUpdated = true;
+								}
+							}
+							for (var j = array[i].length;j < lineAndColumn;j++){
+								grid_data[i][j] = 0;
+							}
+						}
+					}else{
+						//从右至左获取值，键盘右
+						console.log("update右");
+						for (var i = 0; i < lineAndColumn; i++) {
+							for (var j = lineAndColumn - 1,k = 0; k < array[i].length; k++, j--) {
+								if(grid_data[i][j] != array[i][k]) {
+									grid_data[i][j] = array[i][k];
+									isUpdated = true;
+								}
+							}
+							for(var j = lineAndColumn - 1 - array[i].length; j>= 0 ;j--){
+								grid_data[i][j] = 0;
+							}
+						}
+					}
+				}else{
+					//外循环横向
+					if (lineOrColumn == 0) {
+						//从上到下获取值，键盘上
+						console.log("update上");
+						for (var j = 0; j < lineAndColumn; j++) {
+							for (var i = 0; i < array[j].length; i++) {
+								if(grid_data[i][j] != array[j][i]) {
+									grid_data[i][j] = array[j][i];
+									isUpdated = true;
+								}
+							}
+							for (var i = array[j].length; i < lineAndColumn; i++){
+								grid_data[i][j] = 0;
+							}
+						}
+					}else{
+						//从下到上获取值，键盘下
+						console.log("update下");
+						for (var j = 0; j < lineAndColumn; j++) {
+							for (var i = lineAndColumn - 1,k = 0;k < array[j].length; k++, i--) {
+								if(grid_data[i][j] != array[j][k]) {
+									grid_data[i][j] = array[j][k];
+									isUpdated = true;
+								}
+							}
+							for (var i = lineAndColumn - 1 - array[j].length;i >= 0; i--){
+								grid_data[i][j] = 0;
+							}
+						}
+					}
+				}
+				return isUpdated;
+			}
+			//检测游戏是否结束 游戏是否还能继续移动
+			function checkGameIsOver(){
+				var jRight = 0;
+				var jBottom = 0;
+				for(var i = 0; i < lineAndColumn; i++){
+					for(var j = 0; j < lineAndColumn; j++){
+						jRight = j + 1;
+						if(jRight < lineAndColumn){
+							if(grid_data[i][j] == grid_data[i][jRight] || grid_data[i][j] == 0 || grid_data[i][jRight] == 0){
+								return true;
+							}
+						}
+						jBottom = i + 1;
+						if(jBottom < lineAndColumn){
+							if(grid_data[i][j] == grid_data[jBottom][j] || grid_data[i][j] == 0 || grid_data[jBottom][j] == 0){
+								return true;
+							}
+						}
+					}
+				}
+			}
+		});
+	</script>
+</head>
+<body>
+	<div class="container">
+		<canvas id="scene" width="400" height="400"></canvas>
+	</div>
+</body>
+</html>
